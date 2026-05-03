@@ -46,4 +46,32 @@ the world. No Google Drive. No iCloud. Full ownership of my data.
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
+
+home-lab-nas/
+├── docs/                    # Step by step documentation per phase
+├── configs/                 # Configuration files (sanitized)
+├── scripts/                 # Automation scripts
+└── README.md                # This file
+
+## Documentation
+
+Each phase has its own detailed doc in the `/docs` folder explaining 
+what was done, why each decision was made, what went wrong, and how 
+it was fixed.
+
+---
+
+## Security Note
+
+All configuration files in this repository have been sanitized. 
+No passwords, IP addresses, API keys, or personal information 
+are stored here.
+
+---
+
+## Author
+
+**Akshat Singh** — [@cSingh8764](https://github.com/cSingh8764)
+
+*Built for learning. Documented for the community.*
