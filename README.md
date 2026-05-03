@@ -49,9 +49,13 @@ the world. No Google Drive. No iCloud. Full ownership of my data.
 ## Repository Structure
 
 home-lab-nas/
+
 ├── docs/                    # Step by step documentation per phase
+
 ├── configs/                 # Configuration files (sanitized)
+
 ├── scripts/                 # Automation scripts
+
 └── README.md                # This file
 
 ## Documentation
