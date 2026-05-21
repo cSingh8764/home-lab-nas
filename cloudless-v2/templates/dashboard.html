@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudless - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0f0f0f;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 40px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            color: #888;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        .upload-box {
+            background-color: #1a1a1a;
+            border: 1px dashed #333;
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .upload-box input {
+            display: none;
+        }
+
+        .upload-box label {
+            cursor: pointer;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .upload-box label span {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+        button {
+            margin-top: 16px;
+            padding: 10px 24px;
+            background-color: #ffffff;
+            color: #000000;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .file-list {
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid #2a2a2a;
+            font-size: 14px;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item a {
+            color: #888;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .file-item a:hover {
+            color: #ffffff;
+        }
+
+        .empty {
+            padding: 32px;
+            text-align: center;
+            color: #555;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cloudless</h1>
+    <p>Your personal cloud storage</p>
+
+    <div class="upload-box">
+        <form method="post" action="/upload" enctype="multipart/form-data"> 
+          <!--tells the browser how to package the files so that the server can recieve it. splits the form data in to multuple parts, one per field -->
+            <input type="file" name="file" id="file" />
+            <label for="file">
+                Drop a file or <span>browse</span>
+            </label>
+            <br>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+
+    <div class="file-list">
+        {% if files %}
+            {% for file in files %}
+            <div class="file-item">
+                <span>{{ file }}</span>
+                <a href="/download/{{ file }}">Download</a>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty">No files uploaded yet</div>
+        {% endif %}
+    </div>
+</body>
+</html>
