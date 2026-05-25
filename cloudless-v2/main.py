@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, Form, UploadFile, File
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from database import init_db
+from urllib.parse import unquote
 import auth
 import os
 import storage
@@ -20,6 +21,7 @@ def root(request: Request):
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
     user = auth.get_user(username)
+    password = auth.verify_password(password, user["password"])
     
     if not user:
         return templates.TemplateResponse("login.html", {
@@ -27,7 +29,7 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
             "error": "User not found"
         })
     
-    if not auth.verify_password(password, user["password"]):
+    if not password:
         return templates.TemplateResponse("login.html", {
             "request": request,
             "error": "Incorrect password"
@@ -60,16 +62,60 @@ def dashboard(request: Request):
 
 @app.post("/upload")
 def upload_file(file: UploadFile = File(...)):
+  token = request.cookies.get("session")
+
+  if not token or not auth.verify_token(token):
+    return RedirectResponse(url='/', status_code=303)
+  
+  file.file.seek(0,2)
+  file_size = file.file.tell()
+  file.file.seek(0)
+
+  max_size = 100 * 1024 * 1024
+
+  if file_size > max_size:
+    files = os.listdir("storage")
+    return templates.TemplateResponse("dashboard.html", {
+      "request": request,
+      "files": files,
+      "error": f"{file.filename} is too large. Maximum size is 100MB"
+    })
+  
   filename = storage.save_file(file)
   return RedirectResponse(url="/dashboard", status_code=303)
 
-@app.get("/download/{filename}") #{filename} =  called a path parameter. Means that URL is dynamic and it changes based on what we are downloading
-def download_file(filename:str):
+@app.get("/download/{filename}")
+def download_file(request: Request, filename: str):
+    token = request.cookies.get("session")
+    
+    if not token or not auth.verify_token(token):
+        return RedirectResponse(url="/", status_code=303)
+    
+    filename = unquote(filename)
+    file_path = storage.get_file_path(filename)
+    return FileResponse(path=file_path, filename=filename)
+  
+
+@app.post("/delete/{filename}")
+def delete_file(request: Request, filename: str):
   token = request.cookies.get("session")
-
-  if not token or not auth.verify_token(filename):
-    return RedirectResponse(url="/dashboard", status_code=303)
-
+  
+  if not token or not auth.verify_token(token):
+    return RedirectResponse(url='/', status_code=303)
+  
+  filename = unquote(filename)
   file_path = storage.get_file_path(filename)
 
-  return FileResponse(path=file_path, filename=filename)
+  filename = unquote(filename)
+  file_path = storage.get_file_path(filename)
+
+  if not os.path.exists(file_path):
+    files = os.listdir("storage")
+    return templates.TemplateResponse("dashboard.html", {
+      "request": request,
+      "files": files,
+      "error": f"{filename} does not exist"
+    })
+  
+  os.remove(file_path)
+  return RedirectResponse(url="/dashboard", status_code=303)

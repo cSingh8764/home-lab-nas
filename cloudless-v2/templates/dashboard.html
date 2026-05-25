@@ -106,6 +106,10 @@
     <h1>Cloudless</h1>
     <p>Your personal cloud storage</p>
 
+    {% if error %}
+    <p style="color: #ff4444; font-size: 13px; margin-bottom: 16px;">{{ error }}</p>
+    {% endif %}
+
     <div class="upload-box">
         <form method="post" action="/upload" enctype="multipart/form-data"> 
           <!--tells the browser how to package the files so that the server can recieve it. splits the form data in to multuple parts, one per field -->
@@ -124,6 +128,9 @@
             <div class="file-item">
                 <span>{{ file }}</span>
                 <a href="/download/{{ file }}">Download</a>
+                <form method="post" action="/delete/{{ file }}" style="display:inline;">
+                    <button type="submit">Delete</button>
+                </form>
             </div>
             {% endfor %}
         {% else %}
