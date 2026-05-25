@@ -1,81 +1,134 @@
-# Home Lab NAS — Self-Hosted Nextcloud Server
+# Cloudless v2
 
-A complete, documented build of a self-hosted NAS and private cloud 
-storage server using TrueNAS SCALE and Nextcloud. Built from scratch, 
-documented every step of the way.
+A self-hosted NAS (Network Attached Storage) system built to understand 
+how cloud storage platforms like Google Drive work under the hood.
 
 ---
 
-## What This Project Is
+## Why I Built This
 
-This is a full home lab build — starting from zero, learning everything, 
-and ending up with a private cloud server accessible from anywhere in 
-the world. No Google Drive. No iCloud. Full ownership of my data.
+I was frustrated paying monthly fees for cloud storage while my data still 
+lived on someone else's servers. I wanted to understand how these systems 
+actually work by building one myself — from authentication to file storage.
 
-**Final result:**
-- Private file storage accessible from any device, anywhere
-- Photo and video backup from phone automatically
-- File sharing with password-protected links
-- All running on self-hosted hardware I built and configured myself
+---
+
+## Project Goal
+
+This project was built as a learning exercise to explore:
+
+- How file storage systems work
+- How authentication is implemented in real applications
+- How backend APIs handle state, security, and persistence
+
+Instead of relying on third-party services, this is a simplified system 
+built from scratch.
+
+---
+
+## Features (MVP)
+
+- User authentication (login system)
+- Upload files to the server
+- Download stored files
+- Delete files from storage
+- Persistent storage of user data and files
+
+---
+
+## System Design
+
+The system is structured into three main layers:
+
+**Authentication Layer**
+- Password hashing using bcrypt
+- Token-based authentication using JWT
+
+**API Layer**
+- Built with FastAPI
+- Handles all user requests and file operations
+
+**Storage Layer**
+- Files stored locally on the server
+- Metadata managed using SQLite
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Virtualization (Stage 1) | Oracle VirtualBox |
-| NAS Operating System | TrueNAS SCALE |
-| Filesystem | ZFS |
-| Containerization | Docker |
-| Cloud Storage App | Nextcloud |
-| Remote Access | Tailscale |
-| Version Control | Git + GitHub |
+|-------|-----------|
+| Language | Python |
+| Backend Framework | FastAPI |
+| Server | Uvicorn |
+| Database | SQLite |
+| Password Hashing | passlib + bcrypt |
+| Authentication | python-jose (JWT) |
+| File Uploads | python-multipart |
 
 ---
 
-## Build Phases
+## How to Run
 
-- [x] Phase 0 — Project planning and GitHub setup
-- [ ] Phase 1 — VirtualBox VM creation and configuration
-- [ ] Phase 2 — TrueNAS SCALE installation
-- [ ] Phase 3 — ZFS storage pool configuration
-- [ ] Phase 4 — Nextcloud deployment via Docker
-- [ ] Phase 5 — Remote access via Tailscale
-- [ ] Phase 6 — Dedicated hardware build
+**1. Clone the repository**
+```bash
+git clone https://github.com/cSingh8764/home-lab-nas.git
+cd home-lab-nas/cloudless-v2
+```
 
----
+**2. Install dependencies**
+```bash
+pip install -r requirements.txt
+```
 
-## Repository Structure
+**3. Start the server**
+```bash
+uvicorn main:app --reload
+```
 
-home-lab-nas/
+**4. Open in browser**
 
-├── docs/                    # Step by step documentation per phase
-
-├── configs/                 # Configuration files (sanitized)
-
-├── scripts/                 # Automation scripts
-
-└── README.md                # This file
-
-## Documentation
-
-Each phase has its own detailed doc in the `/docs` folder explaining 
-what was done, why each decision was made, what went wrong, and how 
-it was fixed.
+http://127.0.0.1:8000
 
 ---
 
-## Security Note
+## What I Learned
 
-All configuration files in this repository have been sanitized. 
-No passwords, IP addresses, API keys, or personal information 
-are stored here.
+This project helped me move from theory to implementation:
+
+- How JWT authentication works in practice
+- Why password hashing is critical and how bcrypt works
+- How file uploads work over HTTP
+- How APIs are structured in real applications
+- Basics of SQL and data persistence
+- Managing files on a server
 
 ---
 
-## Author
+## Limitations
 
-**Akshat Singh** — [@cSingh8764](https://github.com/cSingh8764)
+This is an MVP and not production-ready:
 
-*Built for learning. Documented for the community.*
+- Files are stored locally (no distributed storage)
+- No encryption for stored files
+- No file versioning or recovery
+- Basic authentication only
+- Not optimized for scale or performance
+
+---
+
+## Future Improvements
+
+- File and folder hierarchy support
+- File sharing via links or permissions
+- Encryption for stored data
+- Deployment on a dedicated NAS machine
+- Improved frontend UI/UX
+- Logging and monitoring
+
+---
+
+## Disclaimer
+
+This is a learning project and should not be used to store sensitive or 
+critical data without additional security hardening.
