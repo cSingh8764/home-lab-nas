@@ -81,16 +81,20 @@ cd home-lab-nas/cloudless-v2
 pip install -r requirements.txt
 ```
 
-**3. Start the server**
+**3. Create your user**
+```bash
+py setup.py
+```
+
+**4. Start the server**
 ```bash
 uvicorn main:app --reload
 ```
 
-**4. Open in browser**
-
+**5. Open in browser**
+```
 http://127.0.0.1:8000
-
----
+```
 
 ## What I Learned
 
