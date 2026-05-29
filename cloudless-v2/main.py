@@ -41,7 +41,7 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     return response
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request):
+def dashboard(request: Request, path: str = ""):
   token = request.cookies.get("session")
 
   if not token:
@@ -52,70 +52,94 @@ def dashboard(request: Request):
   if not username:
     return RedirectResponse(url="/", status_code=303)
 
+  folders, files =  storage.list_contents(path)
+
+  parts = path.split("/") if path else []
+  breadcrumbs = [] #previously accesed files
+  for i, part in enumerate(parts):
+    breadcrumbs.append({
+      "name": part,
+      "path": "/".join(parts[:i+1])
+    })
   
-  files = os.listdir("storage")
   return templates.TemplateResponse("dashboard.html", {
     "request": request,
+    "username": username,
     "files": files,
-    "username": username
+    "folders": folders,
+    "current_path": path,
+    "breadcrumbs": breadcrumbs
   })
 
 @app.post("/upload")
-def upload_file(file: UploadFile = File(...)):
-  token = request.cookies.get("session")
+def upload_file(request: Request, file: UploadFile = File(...), path: str = ""):
+    token = request.cookies.get("session")
 
-  if not token or not auth.verify_token(token):
-    return RedirectResponse(url='/', status_code=303)
+    if not token or not auth.verify_token(token):
+        return RedirectResponse(url="/", status_code=303)
+
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+
+    max_size = 100 * 1024 * 1024
+
+    if file_size > max_size:
+        folders, files = storage.list_contents(path)
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "files": files,
+            "folders": folders,
+            "current_path": path,
+            "breadcrumbs": [],
+            "error": f"{file.filename} is too large. Maximum size is 100MB"
+        })
+
+    storage.save_file(file, path)
+    return RedirectResponse(url=f"/dashboard?path={path}", status_code=303)
+
+@app.get("/download/{filepath:path}")
+def download_file(request: Request, filepath: str):
+    token = request.cookies.get("session")
+    
+    if not token or not auth.verify_token(token):
+        return RedirectResponse(url="/", status_code=303)
+    
+    filepath = unquote(filepath)
+    full_path = os.path.join("storage", filepath)
+    filename = os.path.basename(full_path)
+    return FileResponse(path=full_path, filename=filename)
   
-  file.file.seek(0,2)
-  file_size = file.file.tell()
-  file.file.seek(0)
 
-  max_size = 100 * 1024 * 1024
-
-  if file_size > max_size:
-    files = os.listdir("storage")
-    return templates.TemplateResponse("dashboard.html", {
-      "request": request,
-      "files": files,
-      "error": f"{file.filename} is too large. Maximum size is 100MB"
-    })
-  
-  filename = storage.save_file(file)
-  return RedirectResponse(url="/dashboard", status_code=303)
-
-@app.get("/download/{filename}")
-def download_file(request: Request, filename: str):
+@app.post("/delete/{filename}")
+def delete_file(request: Request, filename: str, path: str = ""):
     token = request.cookies.get("session")
     
     if not token or not auth.verify_token(token):
         return RedirectResponse(url="/", status_code=303)
     
     filename = unquote(filename)
-    file_path = storage.get_file_path(filename)
-    return FileResponse(path=file_path, filename=filename)
-  
+    success = storage.delete_item(filename, path)
+    
+    if not success:
+        folders, files = storage.list_contents(path)
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "files": files,
+            "folders": folders,
+            "current_path": path,
+            "breadcrumbs": [],
+            "error": f"{filename} does not exist"
+        })
+    
+    return RedirectResponse(url=f"/dashboard?path={path}", status_code=303)
 
-@app.post("/delete/{filename}")
-def delete_file(request: Request, filename: str):
+@app.post("/create-folder")
+def create_folder(request: Request, folder_name: str = Form(...), path: str = ""):
   token = request.cookies.get("session")
-  
+
   if not token or not auth.verify_token(token):
-    return RedirectResponse(url='/', status_code=303)
+    return RedirectResponse(url="/", status_code=303)
   
-  filename = unquote(filename)
-  file_path = storage.get_file_path(filename)
-
-  filename = unquote(filename)
-  file_path = storage.get_file_path(filename)
-
-  if not os.path.exists(file_path):
-    files = os.listdir("storage")
-    return templates.TemplateResponse("dashboard.html", {
-      "request": request,
-      "files": files,
-      "error": f"{filename} does not exist"
-    })
-  
-  os.remove(file_path)
-  return RedirectResponse(url="/dashboard", status_code=303)
+  storage.create_folder(folder_name, path)
+  return RedirectResponse(url=f"/dashboard?path={path}", status_code = 303)
