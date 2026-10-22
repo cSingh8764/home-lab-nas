@@ -1,11 +1,14 @@
+import os
+from dotenv import load_dotenv
 from passlib.context import CryptContext
 from database import get_db, init_db
 from jose import JWTError, jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-SECRET_KEY = "cloudless-secret-key-change-this-later"
+load_dotenv()
+SECRET_KEY = os.environ["CLOUDLESS_SECRET_KEY"]
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_MINUTES = 60
 
@@ -47,7 +50,7 @@ def get_user(username: str):
   return user
 
 def create_token(username: str) -> str:
-  expire =  datetime.utcnow() + timedelta(minutes = TOKEN_EXPIRE_MINUTES)
+  expire =  datetime.now(timezone.utc) + timedelta(minutes = TOKEN_EXPIRE_MINUTES)
   payload = {
     "sub": username,
     "exp": expire
