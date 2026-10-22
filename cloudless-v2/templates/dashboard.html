@@ -15,7 +15,6 @@
         }
 
         h1 { font-size: 24px; margin-bottom: 4px; }
-
         .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
 
         .breadcrumbs {
@@ -26,7 +25,6 @@
             font-size: 14px;
             color: #888;
         }
-
         .breadcrumbs a { color: #888; text-decoration: none; }
         .breadcrumbs a:hover { color: #ffffff; }
         .breadcrumbs span { color: #ffffff; }
@@ -35,26 +33,27 @@
             display: flex;
             gap: 12px;
             margin-bottom: 24px;
+            align-items: center;
         }
 
-        .upload-form, .folder-form {
+        .upload-form {
             display: flex;
             gap: 8px;
             align-items: center;
         }
 
         input[type="text"] {
+            width: 100%;
             padding: 10px 14px;
-            background-color: #1a1a1a;
+            background-color: #2a2a2a;
             border: 1px solid #333;
             border-radius: 8px;
             color: #ffffff;
             font-size: 14px;
+            margin-bottom: 16px;
         }
 
-        input[type="file"] {
-            display: none;
-        }
+        input[type="file"] { display: none; }
 
         .btn {
             padding: 10px 20px;
@@ -65,10 +64,7 @@
             cursor: pointer;
         }
 
-        .btn-primary {
-            background-color: #ffffff;
-            color: #000000;
-        }
+        .btn-primary { background-color: #ffffff; color: #000000; }
 
         .btn-secondary {
             background-color: #1a1a1a;
@@ -82,6 +78,17 @@
             border: none;
             cursor: pointer;
             font-size: 13px;
+        }
+
+        .label {
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #ffffff;
         }
 
         .file-list {
@@ -100,11 +107,8 @@
         }
 
         .file-item:last-child { border-bottom: none; }
-
         .file-item a { color: #888; text-decoration: none; font-size: 13px; }
         .file-item a:hover { color: #ffffff; }
-
-        .file-icon { margin-right: 10px; }
 
         .item-left {
             display: flex;
@@ -131,15 +135,33 @@
             margin-bottom: 16px;
         }
 
-        .label {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #ffffff;
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-box {
+            background: #1a1a1a;
+            padding: 32px;
+            border-radius: 12px;
+            width: 360px;
+        }
+
+        .modal-box h3 {
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
         }
     </style>
 </head>
@@ -147,7 +169,6 @@
     <h1>☁️ Cloudless</h1>
     <p class="subtitle">Logged in as {{ username }}</p>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <a href="/dashboard">Home</a>
         {% for crumb in breadcrumbs %}
@@ -160,28 +181,28 @@
     <p class="error">{{ error }}</p>
     {% endif %}
 
-    <!-- Actions -->
     <div class="actions">
-        <form class="upload-form" method="post" action="/upload?path={{ current_path }}" enctype="multipart/form-data">
-            <input type="file" name="file" id="file" />
+        <form id="upload-form" class="upload-form" method="post" action="/upload" enctype="multipart/form-data">
+            <input type="file" name="file" id="file" onchange="showFileName()" />
             <label class="label" for="file">Choose File</label>
+            <span id="file-name" style="color: #888; font-size: 13px;">No file chosen</span>
             <button class="btn btn-primary" type="submit">Upload</button>
         </form>
 
-        <form class="folder-form" method="post" action="/create-folder?path={{ current_path }}">
-            <input type="text" name="folder_name" placeholder="New folder name" />
-            <button class="btn btn-secondary" type="submit">+ Folder</button>
-        </form>
+        <button class="btn btn-secondary" onclick="openModal()">+ New Folder</button>
     </div>
 
-    <!-- File List -->
+    <div id="progress-container" style="display:none; height: 4px; background-color: #2a2a2a; border-radius: 2px; margin-bottom: 24px; overflow: hidden;">
+        <div id="progress-bar" style="height: 100%; width: 0%; background-color: #ffffff; transition: width 0.1s;"></div>
+    </div>
+
     <div class="file-list">
         {% if folders or files %}
 
             {% for folder in folders %}
             <div class="file-item">
                 <div class="item-left">
-                    <span class="file-icon">📁</span>
+                    <span>📁</span>
                     <a href="/dashboard?path={{ current_path + '/' + folder if current_path else folder }}">
                         {{ folder }}
                     </a>
@@ -197,12 +218,13 @@
             {% for file in files %}
             <div class="file-item">
                 <div class="item-left">
-                    <span class="file-icon">📄</span>
-                    <span>{{ file }}</span>
+                    <span>📄</span>
+                    <span>{{ file.name }}</span>
+                    <span style="color: #555; font-size: 12px;">{{ file.size }}</span>
                 </div>
                 <div class="item-right">
-                    <a href="/download/{{ current_path + '/' + file if current_path else file }}">Download</a>
-                    <form method="post" action="/delete/{{ file }}?path={{ current_path }}" style="display:inline;">
+                    <a href="/download/{{ current_path + '/' + file.name if current_path else file.name }}">Download</a>
+                    <form method="post" action="/delete/{{ file.name }}?path={{ current_path }}" style="display:inline;">
                         <button class="btn-danger" type="submit">Delete</button>
                     </form>
                 </div>
@@ -213,5 +235,93 @@
             <div class="empty">This folder is empty</div>
         {% endif %}
     </div>
+
+    <div class="modal-backdrop" id="folder-modal">
+        <div class="modal-box">
+            <h3>New Folder</h3>
+            <form method="post" action="/create-folder?path={{ current_path }}">
+                <input type="text" name="folder_name" id="folder-input" placeholder="Folder name" required />
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            const modal = document.getElementById('folder-modal');
+            modal.style.display = 'flex';
+            document.getElementById('folder-input').focus();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('folder-modal');
+            modal.style.display = 'none';
+            document.getElementById('folder-input').value = '';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('folder-modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        function showFileName(){
+            const input =  document.getElementById('file');
+            const label = document.getElementById('file-name');
+            if (input.files.length > 0){
+                label.textContent = input.files[0].name;
+                label.style.color = '#ffffff'
+            } else {
+                label.textContent = 'No file chosen';
+                label.style.color = '#888';
+            }
+        }
+
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const input = document.getElementById('file');
+            if (input.files.length === 0) {
+                alert("Please choose a file before uploading");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', input.files[0]);
+
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload?path={{ current_path }}');
+
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percent = (event.loaded / event.total) * 100;
+                    progressBar.style.width = percent + '%';
+                }
+            };
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    window.location.reload();
+                } else {
+                    alert("Upload failed");
+                    progressContainer.style.display = 'none';
+                }
+            };
+
+            xhr.send(formData);
+        });
+            
+
+        
+    </script>
 </body>
 </html>

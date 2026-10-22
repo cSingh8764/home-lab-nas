@@ -21,9 +21,23 @@ def list_contents(path: str = ""):
     if os.path.isdir(item_path):
       folders.append(item)
     else:
-      files.append(item)
+      size = os.path.getsize(item_path)
+      files.append({
+        "name": item,
+        "size": format_size(size)
+      })
     
   return folders, files
+
+def format_size(size_bytes: int) -> str:
+  if size_bytes < 1024:
+    return f"{size_bytes} B"
+  elif size_bytes < 1024 * 1024:
+    return f"{size_bytes / 1024:.1f} KB"
+  elif size_bytes < 1024 * 1024 * 1024:
+    return f"{size_bytes / (1024 * 1024):.1f} MB"
+  else:
+    return f"{size_bytes / (1024 * 1024 * 1024)} GB"
 
 def save_file(file: UploadFile, path: str= "") -> str:
   full_path = get_full_path(path)

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, UploadFile, File
+from fastapi import FastAPI, Request, Form, UploadFile, File, Query
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from database import init_db
@@ -16,22 +16,19 @@ def startup_event():
 
 @app.get("/", response_class=HTMLResponse)
 def root(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
+    return templates.TemplateResponse(request, "login.html", {})
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
     user = auth.get_user(username)
     password = auth.verify_password(password, user["password"])
     
     if not user:
-        return templates.TemplateResponse("login.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "login.html", {
             "error": "User not found"
         })
-    
+
     if not password:
-        return templates.TemplateResponse("login.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "login.html", {
             "error": "Incorrect password"
         })
     
@@ -62,8 +59,7 @@ def dashboard(request: Request, path: str = ""):
       "path": "/".join(parts[:i+1])
     })
   
-  return templates.TemplateResponse("dashboard.html", {
-    "request": request,
+  return templates.TemplateResponse(request, "dashboard.html", {
     "username": username,
     "files": files,
     "folders": folders,
@@ -77,23 +73,6 @@ def upload_file(request: Request, file: UploadFile = File(...), path: str = ""):
 
     if not token or not auth.verify_token(token):
         return RedirectResponse(url="/", status_code=303)
-
-    file.file.seek(0, 2)
-    file_size = file.file.tell()
-    file.file.seek(0)
-
-    max_size = 100 * 1024 * 1024
-
-    if file_size > max_size:
-        folders, files = storage.list_contents(path)
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
-            "files": files,
-            "folders": folders,
-            "current_path": path,
-            "breadcrumbs": [],
-            "error": f"{file.filename} is too large. Maximum size is 100MB"
-        })
 
     storage.save_file(file, path)
     return RedirectResponse(url=f"/dashboard?path={path}", status_code=303)
@@ -123,8 +102,7 @@ def delete_file(request: Request, filename: str, path: str = ""):
     
     if not success:
         folders, files = storage.list_contents(path)
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "dashboard.html", {
             "files": files,
             "folders": folders,
             "current_path": path,
@@ -135,11 +113,11 @@ def delete_file(request: Request, filename: str, path: str = ""):
     return RedirectResponse(url=f"/dashboard?path={path}", status_code=303)
 
 @app.post("/create-folder")
-def create_folder(request: Request, folder_name: str = Form(...), path: str = ""):
-  token = request.cookies.get("session")
+def create_folder(request: Request, folder_name: str = Form(...), path: str = Query("")):
+    token = request.cookies.get("session")
 
-  if not token or not auth.verify_token(token):
-    return RedirectResponse(url="/", status_code=303)
-  
-  storage.create_folder(folder_name, path)
-  return RedirectResponse(url=f"/dashboard?path={path}", status_code = 303)
+    if not token or not auth.verify_token(token):
+        return RedirectResponse(url="/", status_code=303)
+    
+    storage.create_folder(folder_name, path)
+    return RedirectResponse(url=f"/dashboard?path={path}", status_code=303)

@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+venv/
+
+# user data — never commit
+storage/
+*.db
+
+# secrets — never commit (.env.example is the template)
+.env
