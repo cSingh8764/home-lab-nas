@@ -12,6 +12,9 @@ def check_name(name: str) -> str:
 
 def list_contents(path: str = ""):
   full_path = safe_path(path)
+  # ?path=<a file> or a missing folder: treat both as not found
+  if not os.path.isdir(full_path):
+    raise FileNotFoundError(path)
   items = os.listdir(full_path)
 
   folders = []

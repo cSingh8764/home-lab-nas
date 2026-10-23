@@ -80,6 +80,12 @@ def invalid_path_handler(request: Request, exc: ValueError):
 def not_found_handler(request: Request, exc: FileNotFoundError):
     return error_page(request, "Not found", 404)
 
+# any other file system error (permissions, invalid names on this OS, ...): a clean page, not a 500
+# FileNotFoundError is an OSError too, but the more specific handler above wins
+@app.exception_handler(OSError)
+def os_error_handler(request: Request, exc: OSError):
+    return error_page(request, "Could not complete that operation", 400)
+
 @app.exception_handler(storage.FileTooLarge)
 def too_large_handler(request: Request, exc: storage.FileTooLarge):
     return error_page(request, f"File too large (max {MAX_UPLOAD_MB} MB)", 413)
