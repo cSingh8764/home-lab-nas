@@ -29,22 +29,22 @@ def root(request: Request):
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
     user = auth.get_user(username)
-    password = auth.verify_password(password, user["password"])
-    
-    if not user:
+
+    # unknown users are checked against a dummy hash so both failures take the same time
+    hashed = user["password"] if user else auth.DUMMY_HASH
+    ok = auth.verify_password(password, hashed)
+
+    if not user or not ok:
         return templates.TemplateResponse(request, "login.html", {
-            "error": "User not found"
+            "error": "Invalid username or password"
         })
 
-    if not password:
-        return templates.TemplateResponse(request, "login.html", {
-            "error": "Incorrect password"
-        })
-    
     token = auth.create_token(username)
     response = RedirectResponse(url="/dashboard", status_code=303)
     response.set_cookie(key="session", value=token, httponly = True) # "httponly = restricts the access of the cookie token. does not allow it to be seen it "
     return response
+
+    
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, path: str = ""):
@@ -95,9 +95,12 @@ def download_file(request: Request, filepath: str):
     
     filepath = unquote(filepath)
     full_path = storage.safe_path(filepath)
+
     if not os.path.isfile(full_path):
         raise FileNotFoundError(filepath)
+    
     filename = os.path.basename(full_path)
+
     return FileResponse(path=full_path, filename=filename)
   
 

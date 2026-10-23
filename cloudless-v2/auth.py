@@ -7,6 +7,9 @@ from datetime import datetime, timedelta, timezone
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# hashed once at startup; login verifies against it for unknown users (timing)
+DUMMY_HASH = pwd_context.hash("dummy-password-never-matches")
+
 load_dotenv()
 SECRET_KEY = os.environ["CLOUDLESS_SECRET_KEY"]
 ALGORITHM = "HS256"
