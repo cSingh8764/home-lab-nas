@@ -158,6 +158,10 @@ def delete_file(request: Request, filename: str, path: str = "", username: str =
     return RedirectResponse(url=dashboard_url(path), status_code=303)
 
 @app.post("/create-folder")
-def create_folder(folder_name: str = Form(...), path: str = Query(""), username: str = Depends(current_user)):
-    storage.create_folder(folder_name, path)
+def create_folder(request: Request, folder_name: str = Form(...), path: str = Query(""), username: str = Depends(current_user)):
+    created = storage.create_folder(folder_name, path)
+
+    if not created:
+        return render_dashboard(request, username, path, error=f"{folder_name} already exists", status_code=409)
+
     return RedirectResponse(url=dashboard_url(path), status_code=303)

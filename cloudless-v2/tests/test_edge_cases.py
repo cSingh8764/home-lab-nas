@@ -75,3 +75,24 @@ def test_name_over_full_path_limit_gives_clean_error(logged_in):
     # 250 is a legal name, but on Windows without long paths the full path passes 260 characters
     r = upload(logged_in, "x" * 250)
     assert r.status_code in (303, 400, 404)
+
+# ---------- creating folders ----------
+
+def test_create_existing_folder_shows_message(logged_in):
+    logged_in.post("/create-folder", data={"folder_name": "docs"})
+    r = logged_in.post("/create-folder", data={"folder_name": "docs"})
+    assert r.status_code == 409
+    assert "docs already exists" in r.text
+
+
+def test_create_folder_with_same_name_as_file_shows_message(logged_in, sandbox):
+    upload(logged_in, "notes")
+    r = logged_in.post("/create-folder", data={"folder_name": "notes"})
+    assert r.status_code == 409
+    assert (sandbox / "storage" / "notes").is_file()
+
+
+def test_create_folder_inside_missing_folder_does_not_create_parent(logged_in, sandbox):
+    r = logged_in.post("/create-folder", params={"path": "missing"}, data={"folder_name": "child"})
+    assert r.status_code == 404
+    assert not (sandbox / "storage" / "missing").exists()

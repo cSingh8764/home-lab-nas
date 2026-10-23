@@ -86,7 +86,8 @@ def create_folder(name: str, path: str="") -> bool:
   if os.path.exists(full_path):
     return False
 
-  os.makedirs(full_path)
+  # mkdir, not makedirs: a missing parent folder is an error, not something to create silently
+  os.mkdir(full_path)
   return True
 
 def delete_item(name: str, path: str = "") -> bool:
