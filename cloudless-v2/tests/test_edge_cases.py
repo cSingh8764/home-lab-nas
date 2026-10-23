@@ -1,4 +1,7 @@
 """Edge cases found by probing after the main hardening: odd inputs must give a clean page, never a 500."""
+import pytest
+
+import storage
 from conftest import USERNAME, upload
 
 # ---------- OS errors ----------
@@ -13,3 +16,62 @@ def test_dashboard_path_pointing_at_a_file_is_not_found(logged_in):
 def test_upload_into_a_file_is_not_found(logged_in):
     upload(logged_in, "notes.txt")
     assert upload(logged_in, "x.txt", path="notes.txt").status_code == 404
+
+# ---------- names Windows can't store ----------
+
+BAD_NAMES = [
+    "a.txt:hidden",   # NTFS alternate data stream
+    "bad<>?.txt",
+    'quote".txt',
+    "pipe|.txt",
+    "star*.txt",
+    "tab\there.txt",
+    "trailing-dot.",
+    "trailing-space ",
+    "CON",
+    "nul.txt",
+    "com1",
+    "LPT9.log",
+    "x" * 251,
+]
+
+
+@pytest.mark.parametrize("name", BAD_NAMES)
+def test_check_name_rejects_invalid_windows_names(name):
+    with pytest.raises(ValueError, match="Invalid name"):
+        storage.check_name(name)
+
+
+# the test client percent-encodes '"' and control characters in upload filenames,
+# so those two can't arrive through an upload; check_name and create-folder cover them
+@pytest.mark.parametrize("name", [n for n in BAD_NAMES if n not in ('quote".txt', "tab\there.txt")])
+def test_upload_with_invalid_windows_name_is_rejected(logged_in, sandbox, name):
+    r = upload(logged_in, name)
+    assert r.status_code == 400
+    assert list((sandbox / "storage").iterdir()) == []   # nothing half-created
+
+
+@pytest.mark.parametrize("name", BAD_NAMES)
+def test_create_folder_with_invalid_windows_name_is_rejected(logged_in, sandbox, name):
+    r = logged_in.post("/create-folder", data={"folder_name": name})
+    assert r.status_code == 400
+    assert list((sandbox / "storage").iterdir()) == []
+
+
+@pytest.mark.parametrize("name", [
+    "report.v2.pdf",
+    "console.log",     # starts with "con" but isn't a device name
+    "COM10",           # only COM1-COM9 are reserved
+    ".hidden",
+    "a b&c#%.txt",
+    "x" * 120,
+])
+def test_unusual_but_valid_names_are_accepted(logged_in, sandbox, name):
+    assert upload(logged_in, name).status_code == 303
+    assert (sandbox / "storage" / name).exists()
+
+
+def test_name_over_full_path_limit_gives_clean_error(logged_in):
+    # 250 is a legal name, but on Windows without long paths the full path passes 260 characters
+    r = upload(logged_in, "x" * 250)
+    assert r.status_code in (303, 400, 404)

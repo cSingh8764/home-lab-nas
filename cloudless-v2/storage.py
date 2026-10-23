@@ -4,9 +4,19 @@ from fastapi import UploadFile
 
 STORAGE_DIR = "storage"
 
+# characters Windows forbids in names (":" would also create a hidden NTFS stream)
+INVALID_CHARS = set('<>:"/\\|?*')
+# Windows device names, reserved even with an extension (CON.txt)
+RESERVED_NAMES = {"CON", "PRN", "AUX", "NUL"} | {f"{d}{i}" for d in ("COM", "LPT") for i in range(1, 10)}
+# file systems allow 255 characters per name; uploads briefly add ".part"
+MAX_NAME_LENGTH = 255 - len(".part")
+
 def check_name(name: str) -> str:
-  # a single file/folder name: no separators, no "." or ".."
-  if not name or name in (".", "..") or "/" in name or "\\" in name:
+  # a single file/folder name: no separators, no "." or "..", nothing Windows can't store
+  if (not name or name in (".", "..") or len(name) > MAX_NAME_LENGTH
+      or any(c in INVALID_CHARS or ord(c) < 32 for c in name)
+      or name[-1] in ". "  # Windows silently strips trailing dots and spaces
+      or name.split(".")[0].strip().upper() in RESERVED_NAMES):
     raise ValueError("Invalid name")
   return name
 
