@@ -52,6 +52,29 @@ def get_user(username: str):
 
   return user
 
+def reset_password(username: str, password: str) -> bool:
+  conn = get_db()
+  cur = conn.execute(
+      "UPDATE users SET password = ? WHERE username = ?",
+      (hash_password(password), username)
+  )
+  conn.commit()
+  conn.close()
+  return cur.rowcount == 1
+
+def delete_user(username: str) -> bool:
+  conn = get_db()
+  cur = conn.execute("DELETE FROM users WHERE username = ?", (username,))
+  conn.commit()
+  conn.close()
+  return cur.rowcount == 1
+
+def list_users() -> list[str]:
+  conn = get_db()
+  rows = conn.execute("SELECT username FROM users ORDER BY username").fetchall()
+  conn.close()
+  return [row["username"] for row in rows]
+
 def create_token(username: str) -> str:
   expire =  datetime.now(timezone.utc) + timedelta(minutes = TOKEN_EXPIRE_MINUTES)
   payload = {

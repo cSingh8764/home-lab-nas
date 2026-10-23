@@ -43,7 +43,7 @@ built from scratch.
 - Human-readable file sizes
 - Logout
 - Optional upload size limit
-- Automated test suite (51 tests)
+- Automated test suite (112 tests)
 
 ---
 
@@ -119,6 +119,14 @@ to start without it. Never commit `.env`. It's already in `.gitignore`.
 ```bash
 python setup.py
 ```
+Passwords are hidden while you type. The same script manages users later:
+
+| Command | What it does |
+|---------|--------------|
+| `python setup.py add [username]` | Create a user (also what plain `python setup.py` does) |
+| `python setup.py reset-password [username]` | Set a new password, for example if you forgot yours |
+| `python setup.py delete <username>` | Delete a user. You type the name again to confirm, and their sessions stop working immediately. |
+| `python setup.py list` | List all usernames |
 
 **5. Start the server**
 ```bash
