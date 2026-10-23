@@ -221,7 +221,8 @@
                     </a>
                 </div>
                 <div class="item-right">
-                    <form method="post" action="/delete/{{ folder|urlencode }}?path={{ current_path|urlencode }}" style="display:inline;">
+                    <form method="post" action="/delete/{{ folder|urlencode }}?path={{ current_path|urlencode }}" style="display:inline;"
+                          data-name="{{ folder }}" data-kind="folder" onsubmit="return confirmDelete(this)">
                         <button class="btn-danger" type="submit">Delete</button>
                     </form>
                 </div>
@@ -237,7 +238,8 @@
                 </div>
                 <div class="item-right">
                     <a href="/download/{{ (current_path + '/' + file.name if current_path else file.name)|urlencode }}">Download</a>
-                    <form method="post" action="/delete/{{ file.name|urlencode }}?path={{ current_path|urlencode }}" style="display:inline;">
+                    <form method="post" action="/delete/{{ file.name|urlencode }}?path={{ current_path|urlencode }}" style="display:inline;"
+                          data-name="{{ file.name }}" data-kind="file" onsubmit="return confirmDelete(this)">
                         <button class="btn-danger" type="submit">Delete</button>
                     </form>
                 </div>
@@ -280,6 +282,16 @@
             if (event.target === modal) {
                 closeModal();
             }
+        }
+
+        // the name comes from data-name, never from text inside the onsubmit code itself:
+        // a file named  x');alert(1)-.txt  must stay a string, not become JavaScript
+        function confirmDelete(form) {
+            const name = form.dataset.name;
+            const what = form.dataset.kind === 'folder'
+                ? `the folder "${name}" and everything in it`
+                : `"${name}"`;
+            return confirm(`Delete ${what}?`);
         }
 
         function showFileName(){

@@ -96,3 +96,24 @@ def test_create_folder_inside_missing_folder_does_not_create_parent(logged_in, s
     r = logged_in.post("/create-folder", params={"path": "missing"}, data={"folder_name": "child"})
     assert r.status_code == 404
     assert not (sandbox / "storage" / "missing").exists()
+
+# ---------- delete confirmation ----------
+
+def test_delete_buttons_ask_for_confirmation(logged_in):
+    upload(logged_in, "notes.txt")
+    logged_in.post("/create-folder", data={"folder_name": "docs"})
+    page = logged_in.get("/dashboard").text
+    assert page.count('onsubmit="return confirmDelete(this)"') == 2
+    assert 'data-name="docs" data-kind="folder"' in page
+    assert 'data-name="notes.txt" data-kind="file"' in page
+
+
+def test_name_in_delete_confirmation_cannot_inject_javascript(logged_in):
+    evil = "x');alert(1)-.txt"
+    upload(logged_in, evil)
+    page = logged_in.get("/dashboard").text
+    # the name only appears HTML-escaped inside data-name, never inside the onsubmit code
+    assert 'data-name="x&#39;);alert(1)-.txt"' in page
+    for line in page.splitlines():
+        if "onsubmit=" in line:
+            assert line.strip().endswith('onsubmit="return confirmDelete(this)">')
