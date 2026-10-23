@@ -14,6 +14,12 @@
             padding: 40px;
         }
 
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
         h1 { font-size: 24px; margin-bottom: 4px; }
         .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
 
@@ -166,14 +172,21 @@
     </style>
 </head>
 <body>
-    <h1>☁️ Cloudless</h1>
-    <p class="subtitle">Logged in as {{ username }}</p>
+    <div class="header">
+        <div>
+            <h1>☁️ Cloudless</h1>
+            <p class="subtitle">Logged in as {{ username }}</p>
+        </div>
+        <form method="post" action="/logout">
+            <button class="btn btn-secondary" type="submit">Log out</button>
+        </form>
+    </div>
 
     <div class="breadcrumbs">
         <a href="/dashboard">Home</a>
         {% for crumb in breadcrumbs %}
             <span>›</span>
-            <a href="/dashboard?path={{ crumb.path }}">{{ crumb.name }}</a>
+            <a href="/dashboard?path={{ crumb.path|urlencode }}">{{ crumb.name }}</a>
         {% endfor %}
     </div>
 
@@ -203,12 +216,12 @@
             <div class="file-item">
                 <div class="item-left">
                     <span>📁</span>
-                    <a href="/dashboard?path={{ current_path + '/' + folder if current_path else folder }}">
+                    <a href="/dashboard?path={{ (current_path + '/' + folder if current_path else folder)|urlencode }}">
                         {{ folder }}
                     </a>
                 </div>
                 <div class="item-right">
-                    <form method="post" action="/delete/{{ folder }}?path={{ current_path }}" style="display:inline;">
+                    <form method="post" action="/delete/{{ folder|urlencode }}?path={{ current_path|urlencode }}" style="display:inline;">
                         <button class="btn-danger" type="submit">Delete</button>
                     </form>
                 </div>
@@ -223,8 +236,8 @@
                     <span style="color: #555; font-size: 12px;">{{ file.size }}</span>
                 </div>
                 <div class="item-right">
-                    <a href="/download/{{ current_path + '/' + file.name if current_path else file.name }}">Download</a>
-                    <form method="post" action="/delete/{{ file.name }}?path={{ current_path }}" style="display:inline;">
+                    <a href="/download/{{ (current_path + '/' + file.name if current_path else file.name)|urlencode }}">Download</a>
+                    <form method="post" action="/delete/{{ file.name|urlencode }}?path={{ current_path|urlencode }}" style="display:inline;">
                         <button class="btn-danger" type="submit">Delete</button>
                     </form>
                 </div>
@@ -239,7 +252,7 @@
     <div class="modal-backdrop" id="folder-modal">
         <div class="modal-box">
             <h3>New Folder</h3>
-            <form method="post" action="/create-folder?path={{ current_path }}">
+            <form method="post" action="/create-folder?path={{ current_path|urlencode }}">
                 <input type="text" name="folder_name" id="folder-input" placeholder="Folder name" required />
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -299,7 +312,7 @@
             progressBar.style.width = '0%';
 
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/upload?path={{ current_path }}');
+            xhr.open('POST', '/upload?path={{ current_path|urlencode }}');
 
             xhr.upload.onprogress = function(event) {
                 if (event.lengthComputable) {
@@ -311,6 +324,9 @@
             xhr.onload = function() {
                 if (xhr.status === 200) {
                     window.location.reload();
+                } else if (xhr.status === 413) {
+                    alert("File too large");
+                    progressContainer.style.display = 'none';
                 } else {
                     alert("Upload failed");
                     progressContainer.style.display = 'none';

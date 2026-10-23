@@ -38,15 +38,33 @@ def format_size(size_bytes: int) -> str:
   elif size_bytes < 1024 * 1024 * 1024:
     return f"{size_bytes / (1024 * 1024):.1f} MB"
   else:
-    return f"{size_bytes / (1024 * 1024 * 1024)} GB"
+    return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
 
-def save_file(file: UploadFile, path: str= "") -> str:
+class FileTooLarge(Exception):
+  pass
+
+CHUNK_SIZE = 1024 * 1024
+
+def save_file(file: UploadFile, path: str= "", max_bytes: int | None = None) -> str:
   # the browser sends the filename, so treat it as attacker-controlled
   filename = check_name(os.path.basename(file.filename or ""))
   file_path = safe_path(path, filename)
 
-  with open(file_path, "wb") as buffer:
-    shutil.copyfileobj(file.file, buffer)
+  # write to a temp file first, so a failed upload never clobbers an existing file
+  tmp_path = file_path + ".part"
+  written = 0
+  try:
+    with open(tmp_path, "wb") as buffer:
+      while chunk := file.file.read(CHUNK_SIZE):
+        written += len(chunk)
+        if max_bytes is not None and written > max_bytes:
+          raise FileTooLarge(filename)
+        buffer.write(chunk)
+    os.replace(tmp_path, file_path)
+  except BaseException:
+    if os.path.exists(tmp_path):
+      os.remove(tmp_path)
+    raise
 
   return filename
 
