@@ -1,7 +1,10 @@
 import sqlite3
 
+# module-level so tests can point it at a temporary database
+DB_PATH = "cloudless.db"
+
 def get_db():
-    conn = sqlite3.connect("cloudless.db")
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
