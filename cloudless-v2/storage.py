@@ -4,13 +4,14 @@ from fastapi import UploadFile
 
 STORAGE_DIR = "storage"
 
-def get_full_path(path: str = "") -> str:
-  if path:
-    return os.path.join(STORAGE_DIR, path)
-  return STORAGE_DIR
+def check_name(name: str) -> str:
+  # a single file/folder name: no separators, no "." or ".."
+  if not name or name in (".", "..") or "/" in name or "\\" in name:
+    raise ValueError("Invalid name")
+  return name
 
 def list_contents(path: str = ""):
-  full_path = get_full_path(path)
+  full_path = safe_path(path)
   items = os.listdir(full_path)
 
   folders = []
@@ -26,7 +27,7 @@ def list_contents(path: str = ""):
         "name": item,
         "size": format_size(size)
       })
-    
+
   return folders, files
 
 def format_size(size_bytes: int) -> str:
@@ -40,32 +41,43 @@ def format_size(size_bytes: int) -> str:
     return f"{size_bytes / (1024 * 1024 * 1024)} GB"
 
 def save_file(file: UploadFile, path: str= "") -> str:
-  full_path = get_full_path(path)
-  file_path = os.path.join(full_path, file.filename)
+  # the browser sends the filename, so treat it as attacker-controlled
+  filename = check_name(os.path.basename(file.filename or ""))
+  file_path = safe_path(path, filename)
 
   with open(file_path, "wb") as buffer:
     shutil.copyfileobj(file.file, buffer)
-  
-  return file.filename
+
+  return filename
 
 def create_folder(name: str, path: str="") -> bool:
-  full_path = os.path.join(get_full_path(path), name)
+  full_path = safe_path(path, check_name(name))
   if os.path.exists(full_path):
     return False
-  
+
   os.makedirs(full_path)
   return True
 
-def get_file_path(filename: str, path: str = "") -> str:
-  return os.path.join(get_full_path(path), filename)
-
 def delete_item(name: str, path: str = "") -> bool:
-  full_path = os.path.join(get_full_path(path), name)
+  full_path = safe_path(path, check_name(name))
+  # path=".." + name="storage" resolves to the root itself: never delete it
+  if full_path == safe_path():
+    raise ValueError("Cannot delete storage root")
   if not os.path.exists(full_path):
     return False
   if os.path.isdir(full_path):
     shutil.rmtree(full_path)
   else:
     os.remove(full_path)
-  
+
   return True
+
+def safe_path(*parts: str) -> str:
+  base = os.path.realpath(STORAGE_DIR)
+
+  target = os.path.realpath(os.path.join(base,*parts))
+
+  if os.path.commonpath([base, target]) != base:
+    raise ValueError("Path escapes storage")
+
+  return target

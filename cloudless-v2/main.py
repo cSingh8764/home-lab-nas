@@ -14,6 +14,15 @@ templates = Jinja2Templates(directory="templates")
 def startup_event():
     init_db()
 
+# storage.safe_path / check_name raise ValueError for paths outside storage or bad names
+@app.exception_handler(ValueError)
+def invalid_path_handler(request: Request, exc: ValueError):
+    return HTMLResponse('Invalid path or name. <a href="/dashboard">Back</a>', status_code=400)
+
+@app.exception_handler(FileNotFoundError)
+def not_found_handler(request: Request, exc: FileNotFoundError):
+    return HTMLResponse('Not found. <a href="/dashboard">Back</a>', status_code=404)
+
 @app.get("/", response_class=HTMLResponse)
 def root(request: Request):
     return templates.TemplateResponse(request, "login.html", {})
@@ -85,7 +94,9 @@ def download_file(request: Request, filepath: str):
         return RedirectResponse(url="/", status_code=303)
     
     filepath = unquote(filepath)
-    full_path = os.path.join("storage", filepath)
+    full_path = storage.safe_path(filepath)
+    if not os.path.isfile(full_path):
+        raise FileNotFoundError(filepath)
     filename = os.path.basename(full_path)
     return FileResponse(path=full_path, filename=filename)
   
